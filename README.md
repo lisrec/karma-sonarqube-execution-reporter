@@ -45,7 +45,6 @@ sonarQubeExecutionReporter: {
   sonarQubeVersion: string,
   outputFile: string,
   outputDir: string,
-  useBrowserName: boolean,
   testPaths: string[],
   testFilePattern: string,
 }
