@@ -1,217 +1,217 @@
-var path = require('path')
-var fs = require('fs')
-var builder = require('xmlbuilder')
-var fileUtil = require('./src/file-util.js')
+const path = require('path');
+const fs = require('fs');
+const builder = require('xmlbuilder');
+const fileUtil = require('./src/file-util.js');
 
-var SonarQubeUnitReporter = function (baseReporterDecorator, config, logger, helper, formatError) {
-  var log = logger.create('reporter.sonarqubeUnit')
-  var reporterConfig = config.sonarQubeUnitReporter || {}
-  var sonarQubeVersion = reporterConfig.sonarQubeVersion || 'LATEST'
-  var pkgName = reporterConfig.suite || ''
-  var outputDir = reporterConfig.outputDir
-  var outputFile = reporterConfig.outputFile
-  var useBrowserName = reporterConfig.useBrowserName
+const SonarQubeUnitReporter = function (baseReporterDecorator, config, logger, helper, formatError) {
+	const log = logger.create('reporter.sonarqubeUnit');
+	const reporterConfig = config.sonarQubeUnitReporter || {};
+	const sonarQubeVersion = reporterConfig.sonarQubeVersion || 'LATEST';
+	const pkgName = reporterConfig.suite || '';
+	const outputFile = reporterConfig.outputFile;
 
-  var filenameFormatter = reporterConfig.filenameFormatter || null
-  var testnameFormatter = reporterConfig.testnameFormatter || null
+	let outputDir = reporterConfig.outputDir;
+	let useBrowserName = reporterConfig.useBrowserName;
 
-  var suites
-  var pendingFileWritings = 0
-  var fileWritingFinished = function () {}
-  var allMessages = []
+	let filenameFormatter = reporterConfig.filenameFormatter || null;
+	const testnameFormatter = reporterConfig.testnameFormatter || null;
 
-  if (outputDir == null) {
-    outputDir = '.'
-  }
+	let suites;
+	let pendingFileWritings = 0;
+	let fileWritingFinished = function () {};
+	const allMessages = [];
 
-  outputDir = helper.normalizeWinPath(path.resolve(config.basePath, outputDir)) + path.sep
+	if (outputDir == null) {
+		outputDir = '.';
+	}
 
-  if (typeof useBrowserName === 'undefined') {
-    useBrowserName = true
-  }
+	outputDir = helper.normalizeWinPath(path.resolve(config.basePath, outputDir)) + path.sep;
 
-  baseReporterDecorator(this)
+	if (typeof useBrowserName === 'undefined') {
+		useBrowserName = true;
+	}
 
-  this.adapters = [
-    function (msg) {
-      allMessages.push(msg)
-    }
-  ]
+	baseReporterDecorator(this);
 
-  var initliazeXmlForBrowser = function (browser) {
-    var tagName
-    switch (sonarQubeVersion) {
-      case '5.x':
-        tagName = 'unitTest'; break
-      default:
-        tagName = 'testExecutions'
-    }
+	this.adapters = [
+		function (msg) {
+			allMessages.push(msg);
+		}
+	];
 
-    var parentTag = suites[browser.id] = builder.create(tagName,
-                                                       {version: '1.0', encoding: 'UTF-8', standalone: true},
-                                                       {pubID: null, sysID: null},
-                                                       {allowSurrogateChars: false, skipNullAttributes: false, headless: true, ignoreDecorators: false, separateArrayItems: false, noDoubleEncoding: false, stringify: {}})
+	const initliazeXmlForBrowser = function (browser) {
+		let tagName;
+		switch (sonarQubeVersion) {
+		case '5.x':
+			tagName = 'unitTest'; break;
+		default:
+			tagName = 'testExecutions';
+		}
 
-    parentTag.att('version', '1')
-  }
+		const parentTag = suites[browser.id] = builder.create(tagName,
+			{version: '1.0', encoding: 'UTF-8', standalone: true},
+			{pubID: null, sysID: null},
+			{allowSurrogateChars: false, skipNullAttributes: false, headless: true, ignoreDecorators: false, separateArrayItems: false, noDoubleEncoding: false, stringify: {}});
 
-  var writeXmlForBrowser = function (browser) {
-    var safeBrowserName = browser.name.replace(/ /g, '_')
-    var newOutputFile
-    if (outputFile != null) {
-      var dir = useBrowserName ? path.join(outputDir, safeBrowserName)
-                               : outputDir
-      newOutputFile = path.join(dir, outputFile)
-    } else if (useBrowserName) {
-      newOutputFile = path.join(outputDir, 'ut_report-' + safeBrowserName + '.xml')
-    } else {
-      newOutputFile = path.join(outputDir, 'ut_report.xml')
-    }
+		parentTag.att('version', '1');
+	};
 
-    var xmlToOutput = suites[browser.id]
-    if (!xmlToOutput) {
-      return // don't die if browser didn't start
-    }
+	const writeXmlForBrowser = function (browser) {
+		const safeBrowserName = browser.name.replace(/ /g, '_');
+		let newOutputFile;
+		if (outputFile != null) {
+			const dir = useBrowserName ? path.join(outputDir, safeBrowserName) : outputDir;
+			newOutputFile = path.join(dir, outputFile);
+		} else if (useBrowserName) {
+			newOutputFile = path.join(outputDir, 'ut_report-' + safeBrowserName + '.xml');
+		} else {
+			newOutputFile = path.join(outputDir, 'ut_report.xml');
+		}
 
-    pendingFileWritings++
-    helper.mkdirIfNotExists(path.dirname(newOutputFile), function () {
-      fs.writeFile(newOutputFile, xmlToOutput.end({pretty: true}), function (err) {
-        if (err) {
-          log.warn('Cannot write JUnit xml\n\t' + err.message)
-        } else {
-          log.debug('JUnit results written to "%s".', newOutputFile)
-        }
+		const xmlToOutput = suites[browser.id];
+		if (!xmlToOutput) {
+			return; // don't die if browser didn't start
+		}
 
-        if (!--pendingFileWritings) {
-          fileWritingFinished()
-        }
-      })
-    })
-  }
+		pendingFileWritings++;
+		helper.mkdirIfNotExists(path.dirname(newOutputFile), () => {
+			fs.writeFile(newOutputFile, xmlToOutput.end({pretty: true}), (err) => {
+				if (err) {
+					log.warn('Cannot write JUnit xml\n\t' + err.message);
+				} else {
+					log.debug('JUnit results written to "%s".', newOutputFile);
+				}
 
-  var getClassName = function (browser, result) {
-    var browserName = browser.name.replace(/ /g, '_').replace(/\./g, '_') + '.'
+				if (!--pendingFileWritings) {
+					fileWritingFinished();
+				}
+			});
+		});
+	};
 
-    return (useBrowserName ? browserName : '') + (pkgName ? pkgName + '/' : '') + result.suite[0]
-  }
+	const getClassName = function (browser, result) {
+		const browserName = browser.name.replace(/ /g, '_').replace(/\./g, '_') + '.';
 
-  this.onRunStart = function (browsers) {
-    suites = Object.create(null)
+		return (useBrowserName ? browserName : '') + (pkgName ? pkgName + '/' : '') + result.suite[0];
+	};
 
-    // TODO(vojta): remove once we don't care about Karma 0.10
-    browsers.forEach(initliazeXmlForBrowser)
-  }
+	this.onRunStart = function (browsers) {
+		suites = Object.create(null);
 
-  this.onBrowserStart = function (browser) {
-    initliazeXmlForBrowser(browser)
-  }
+		// TODO(vojta): remove once we don't care about Karma 0.10
+		browsers.forEach(initliazeXmlForBrowser);
+	};
 
-  this.onBrowserComplete = function (browser) {
-    var suite = suites[browser.id]
-    var result = browser.lastResult
-    if (!suite || !result) {
-      return // don't die if browser didn't start
-    }
+	this.onBrowserStart = function (browser) {
+		initliazeXmlForBrowser(browser);
+	};
 
-    writeXmlForBrowser(browser)
-  }
+	this.onBrowserComplete = function (browser) {
+		const suite = suites[browser.id];
+		const result = browser.lastResult;
+		if (!suite || !result) {
+			return; // don't die if browser didn't start
+		}
 
-  this.onRunComplete = function () {
-    suites = null
-    allMessages.length = 0
-  }
+		writeXmlForBrowser(browser);
+	};
 
-  this.specSuccess = this.specSkipped = this.specFailure = function (browser, result) {
-    var preMapped = getClassName(browser, result).replace(/\\/g, '/')
-    var nextPath = preMapped
-    if (filenameFormatter !== null) {
-      nextPath = filenameFormatter(nextPath, result)
-      if (preMapped !== nextPath) {
-        log.debug('Transformed File name \"' + preMapped + '\" -> \"' + nextPath + '\"')
-      } else {
-        log.debug('Name not transformed for File \"' + preMapped + '\"')
-      }
-    }
+	this.onRunComplete = function () {
+		suites = null;
+		allMessages.length = 0;
+	};
 
-    var fileNodes = suites[browser.id]
-    var lastFilePath
+	this.specSuccess = this.specSkipped = this.specFailure = function (browser, result) {
+		const preMapped = getClassName(browser, result).replace(/\\/g, '/');
+		let nextPath = preMapped;
+		if (filenameFormatter !== null) {
+			nextPath = filenameFormatter(nextPath, result);
+			if (preMapped !== nextPath) {
+				log.debug('Transformed File name "' + preMapped + '" -> "' + nextPath + '"');
+			} else {
+				log.debug('Name not transformed for File "' + preMapped + '"');
+			}
+		}
 
-    var numberOfFileNodes = fileNodes.children.length
-    if (numberOfFileNodes > 0) {
-      lastFilePath = fileNodes.children[numberOfFileNodes - 1].attributes.path.value
-      if (lastFilePath !== nextPath) {
-        suites[browser.id].ele('file', {
-          path: nextPath
-        })
-      }
-    } else {
-      suites[browser.id].ele('file', {
-        path: nextPath
-      })
-    }
-    lastFilePath = nextPath
+		const fileNodes = suites[browser.id];
+		let lastFilePath;
 
-    var appendToThisNode = suites[browser.id].children[suites[browser.id].children.length - 1]
+		const numberOfFileNodes = fileNodes.children.length;
+		if (numberOfFileNodes > 0) {
+			lastFilePath = fileNodes.children[numberOfFileNodes - 1].attributes.path.value;
+			if (lastFilePath !== nextPath) {
+				suites[browser.id].ele('file', {
+					path: nextPath
+				});
+			}
+		} else {
+			suites[browser.id].ele('file', {
+				path: nextPath
+			});
+		}
+		lastFilePath = nextPath;
 
-    function getDescription (result) {
-      var desc = result.description
-      for (var i = result.suite.length - 1; i >= 0; i--) {
-        desc = result.suite[i] + ' ' + desc
-      }
-      return desc
-    }
+		const appendToThisNode = suites[browser.id].children[suites[browser.id].children.length - 1];
 
-    var testname = getDescription(result)
-    var testnameFormatted = testname
+		function getDescription (result) {
+			let desc = result.description;
+			for (let i = result.suite.length - 1; i >= 0; i--) {
+				desc = result.suite[i] + ' ' + desc;
+			}
+			return desc;
+		}
 
-    if (testnameFormatter !== null) {
-      testnameFormatted = testnameFormatter(testname, result)
-      if (testnameFormatted && testnameFormatted !== testname) {
-        log.debug('Transformed test name \"' + testname + '\" -> \"' + testnameFormatted + '\"')
-      } else {
-        testnameFormatted = testname
-        log.debug('Name not transformed for test \"' + testnameFormatted + '\"')
-      }
-    }
-    var testCase = appendToThisNode.ele('testCase', {name: testnameFormatted, duration: (result.time || 1)})
+		const testname = getDescription(result);
+		let testnameFormatted = testname;
 
-    if (result.skipped) {
-      testCase.ele('skipped', {message: 'Skipped'})
-    }
+		if (testnameFormatter !== null) {
+			testnameFormatted = testnameFormatter(testname, result);
+			if (testnameFormatted && testnameFormatted !== testname) {
+				log.debug('Transformed test name "' + testname + '" -> "' + testnameFormatted + '"');
+			} else {
+				testnameFormatted = testname;
+				log.debug('Name not transformed for test "' + testnameFormatted + '"');
+			}
+		}
+		const testCase = appendToThisNode.ele('testCase', {name: testnameFormatted, duration: (result.time || 1)});
 
-    if (!result.success) {
-      testCase.ele('failure', {message: 'Error'}, formatError(result.log.join('\n\n')))
-    }
-  }
+		if (result.skipped) {
+			testCase.ele('skipped', {message: 'Skipped'});
+		}
 
-  // wait for writing all the xml files, before exiting
-  this.onExit = function (done) {
-    if (pendingFileWritings) {
-      fileWritingFinished = done
-    } else {
-      done()
-    }
-  }
+		if (!result.success) {
+			testCase.ele('failure', {message: 'Error'}, formatError(result.log.join('\n\n')));
+		}
+	};
 
-  // look for jasmine test files in the specified path
-  var overrideTestDescription = reporterConfig.overrideTestDescription || false
-  var testPath = reporterConfig.testPath || './'
-  var testPaths = reporterConfig.testPaths || [testPath]
-  var testFilePattern = reporterConfig.testFilePattern || '(.spec.ts|.spec.js)'
-  var filesForDescriptions = fileUtil.getFilesForDescriptions(testPaths, testFilePattern)
+	// wait for writing all the xml files, before exiting
+	this.onExit = function (done) {
+		if (pendingFileWritings) {
+			fileWritingFinished = done;
+		} else {
+			done();
+		}
+	};
 
-  function defaultFilenameFormatter (nextPath, result) {
-    return filesForDescriptions[nextPath]
-  }
+	// look for jasmine test files in the specified path
+	const overrideTestDescription = reporterConfig.overrideTestDescription || false;
+	const testPath = reporterConfig.testPath || './';
+	const testPaths = reporterConfig.testPaths || [testPath];
+	const testFilePattern = reporterConfig.testFilePattern || '(.spec.ts|.spec.js)';
+	const filesForDescriptions = fileUtil.getFilesForDescriptions(testPaths, testFilePattern);
 
-  if (overrideTestDescription) {
-    filenameFormatter = defaultFilenameFormatter
-  }
-}
+	function defaultFilenameFormatter (nextPath, _result) {
+		return filesForDescriptions[nextPath];
+	}
 
-SonarQubeUnitReporter.$inject = ['baseReporterDecorator', 'config', 'logger', 'helper', 'formatError']
+	if (overrideTestDescription) {
+		filenameFormatter = defaultFilenameFormatter;
+	}
+};
+
+SonarQubeUnitReporter.$inject = ['baseReporterDecorator', 'config', 'logger', 'helper', 'formatError'];
 
 // PUBLISH DI MODULE
 module.exports = {
-  'reporter:sonarqubeUnit': ['type', SonarQubeUnitReporter]
-}
+	'reporter:sonarqubeUnit': ['type', SonarQubeUnitReporter]
+};

@@ -1,11 +1,13 @@
-describe('first test first description', function () {
-  it('test', function () {
-    expect(true).toBe(true)
-  })
-})
+/* eslint-disable no-undef */
 
-describe('first test second description', function () {
-  it('another test', function () {
-    expect(true).toBe(true)
-  })
-})
+describe('first test first description', () => {
+	it('test', () => {
+		expect(true).toBe(true);
+	});
+});
+
+describe('first test second description', () => {
+	it('another test', () => {
+		expect(true).toBe(true);
+	});
+});

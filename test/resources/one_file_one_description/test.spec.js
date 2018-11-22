@@ -1,5 +1,7 @@
-describe('test description', function () {
-  it('test', function () {
-    expect(true).toBe(true)
-  })
-})
+/* eslint-disable no-undef */
+
+describe('test description', () => {
+	it('test', () => {
+		expect(true).toBe(true);
+	});
+});

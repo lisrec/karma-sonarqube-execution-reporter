@@ -1,23 +1,18 @@
-### karma-sonarqube-unit-reporter
+### karma-sonarqube-execution-reporter
 
-[![NpmLicense](https://img.shields.io/npm/l/karma-sonarqube-unit-reporter.svg)](https://opensource.org/licenses/MIT) [![npm](https://img.shields.io/npm/dt/karma-sonarqube-unit-reporter.svg)](https://npmjs.com/package/karma-sonarqube-unit-reporter) [![NpmVersion](https://img.shields.io/npm/v/karma-sonarqube-unit-reporter.svg)](https://npmjs.com/package/karma-sonarqube-unit-reporter)
+[![NpmLicense](https://img.shields.io/npm/l/karma-sonarqube-execution-reporter.svg)](https://opensource.org/licenses/MIT) [![npm](https://img.shields.io/npm/dt/karma-sonarqube-execution-reporter.svg)](https://npmjs.com/package/karma-sonarqube-execution-reporter) [![NpmVersion](https://img.shields.io/npm/v/karma-sonarqube-execution-reporter.svg)](https://npmjs.com/package/karma-sonarqube-execution-reporter)
 
-##### Donate
-
-Clear feedback. Just if you appreciate my efforts!
-
-[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=3V7ZGPEGL55VS)
 
 ##### Motivation
 
-This solution is based on https://github.com/karma-runner/karma-junit-reporter .
+This solution is based on https://github.com/tornaia/karma-sonarqube-unit-reporter
 
-Issue: https://github.com/karma-runner/karma-junit-reporter/issues/81
+Issue: karma-sonarqube-unit-reporter has problem with putting correct `path` attribute in `file` tag.
 
 ##### How to get
 
 Available on npmjs.org
-https://www.npmjs.com/package/karma-sonarqube-unit-reporter
+https://www.npmjs.com/package/https://github.com/lisrec/karma-sonarqube-execution-reporter
 
 ##### How to use
 
@@ -62,7 +57,7 @@ module.exports = function(config) {
     files: listFiles(),
 
     singleRun: true,
-	
+
     colors:    false,
 
     autoWatch: false,
@@ -104,7 +99,7 @@ module.exports = function(config) {
     },
 
     reporters: ['progress', 'sonarqubeUnit', 'coverage'],
-    
+
     preprocessors: {
       'src/**/*.js':   ['coverage'],
       'test/**/*.js':   ['coverage']
