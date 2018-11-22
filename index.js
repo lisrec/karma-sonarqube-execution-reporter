@@ -3,43 +3,45 @@ const fs = require('fs');
 const builder = require('xmlbuilder');
 const fileUtil = require('./src/file-util.js');
 
-const SonarQubeUnitReporter = function (baseReporterDecorator, config, logger, helper, formatError) {
+
+const SonarQubeExecutionReporter = function(baseReporterDecorator, config, logger, helper, formatError) {
 	const log = logger.create('reporter.sonarqubeUnit');
-	const reporterConfig = config.sonarQubeUnitReporter || {};
-	const sonarQubeVersion = reporterConfig.sonarQubeVersion || 'LATEST';
-	const pkgName = reporterConfig.suite || '';
-	const outputFile = reporterConfig.outputFile;
 
-	let outputDir = reporterConfig.outputDir;
-	let useBrowserName = reporterConfig.useBrowserName;
+	// Get configuration
+	const repConf = config.sonarQubeExecutionReporter || {};
+	const sonarQubeVersion = repConf.sonarQubeVersion || 'LATEST';
+	const pkgName = repConf.suite || '';
+	const outputFile = repConf.outputFile;
+	const outputDir = helper.normalizeWinPath(path.resolve(config.basePath, repConf.outputDir || '.')) + path.sep;
+	const useBrowserName = (!repConf.useBrowserName) ? false : true;
 
-	let filenameFormatter = reporterConfig.filenameFormatter || null;
-	const testnameFormatter = reporterConfig.testnameFormatter || null;
+	const testPath = repConf.testPath || './';
+	const testPaths = repConf.testPaths || [testPath];
+	const testFilePattern = repConf.testFilePattern || '.spec.(ts|js)';
+	const filesForDescriptions = fileUtil.getFilesForDescriptions(testPaths, testFilePattern);
 
+
+	// Init data
 	let suites;
 	let pendingFileWritings = 0;
-	let fileWritingFinished = function () {};
+	let fileWritingFinished = () => null;
 	const allMessages = [];
-
-	if (outputDir == null) {
-		outputDir = '.';
-	}
-
-	outputDir = helper.normalizeWinPath(path.resolve(config.basePath, outputDir)) + path.sep;
-
-	if (typeof useBrowserName === 'undefined') {
-		useBrowserName = true;
-	}
 
 	baseReporterDecorator(this);
 
 	this.adapters = [
-		function (msg) {
+		function(msg) {
 			allMessages.push(msg);
 		}
 	];
 
-	const initliazeXmlForBrowser = function (browser) {
+
+	// Helpers functions
+	const transformDescribeToPath = function(nextPath, _result) {
+		return filesForDescriptions[nextPath];
+	};
+
+	const initliazeXmlForBrowser = function(browser) {
 		let tagName;
 		switch (sonarQubeVersion) {
 		case '5.x':
@@ -56,7 +58,7 @@ const SonarQubeUnitReporter = function (baseReporterDecorator, config, logger, h
 		parentTag.att('version', '1');
 	};
 
-	const writeXmlForBrowser = function (browser) {
+	const writeXmlForBrowser = function(browser) {
 		const safeBrowserName = browser.name.replace(/ /g, '_');
 		let newOutputFile;
 		if (outputFile != null) {
@@ -89,54 +91,53 @@ const SonarQubeUnitReporter = function (baseReporterDecorator, config, logger, h
 		});
 	};
 
-	const getClassName = function (browser, result) {
+	const getClassName = function(browser, result) {
 		const browserName = browser.name.replace(/ /g, '_').replace(/\./g, '_') + '.';
-
 		return (useBrowserName ? browserName : '') + (pkgName ? pkgName + '/' : '') + result.suite[0];
 	};
 
-	this.onRunStart = function (browsers) {
-		suites = Object.create(null);
-
-		// TODO(vojta): remove once we don't care about Karma 0.10
-		browsers.forEach(initliazeXmlForBrowser);
+	const getTestName = function(result) {
+		let desc = result.description;
+		for (let i = result.suite.length - 1; i >= 0; i--) {
+			desc = result.suite[i] + ' ' + desc;
+		}
+		return desc;
 	};
 
-	this.onBrowserStart = function (browser) {
+
+	// Karma methods override
+	const karmaOnRunStart = function() {
+		suites = Object.create(null);
+	};
+
+	const karmaOnBrowserStart = function(browser) {
 		initliazeXmlForBrowser(browser);
 	};
 
-	this.onBrowserComplete = function (browser) {
+	const karmaOnBrowserComplete = function(browser) {
 		const suite = suites[browser.id];
 		const result = browser.lastResult;
 		if (!suite || !result) {
-			return; // don't die if browser didn't start
+			return;
 		}
 
 		writeXmlForBrowser(browser);
 	};
 
-	this.onRunComplete = function () {
+	const karmaOnRunComplete = function() {
 		suites = null;
 		allMessages.length = 0;
 	};
 
-	this.specSuccess = this.specSkipped = this.specFailure = function (browser, result) {
-		const preMapped = getClassName(browser, result).replace(/\\/g, '/');
-		let nextPath = preMapped;
-		if (filenameFormatter !== null) {
-			nextPath = filenameFormatter(nextPath, result);
-			if (preMapped !== nextPath) {
-				log.debug('Transformed File name "' + preMapped + '" -> "' + nextPath + '"');
-			} else {
-				log.debug('Name not transformed for File "' + preMapped + '"');
-			}
-		}
+	const karmaSpecDone = function(browser, result) {
+		const specDescribe = getClassName(browser, result).replace(/\\/g, '/');
+		const nextPath = transformDescribeToPath(specDescribe, result);
+		log.debug('Transformed File name "' + specDescribe + '" -> "' + nextPath + '"');
 
-		const fileNodes = suites[browser.id];
 		let lastFilePath;
-
+		const fileNodes = suites[browser.id];
 		const numberOfFileNodes = fileNodes.children.length;
+
 		if (numberOfFileNodes > 0) {
 			lastFilePath = fileNodes.children[numberOfFileNodes - 1].attributes.path.value;
 			if (lastFilePath !== nextPath) {
@@ -149,43 +150,23 @@ const SonarQubeUnitReporter = function (baseReporterDecorator, config, logger, h
 				path: nextPath
 			});
 		}
+
 		lastFilePath = nextPath;
 
 		const appendToThisNode = suites[browser.id].children[suites[browser.id].children.length - 1];
-
-		function getDescription (result) {
-			let desc = result.description;
-			for (let i = result.suite.length - 1; i >= 0; i--) {
-				desc = result.suite[i] + ' ' + desc;
-			}
-			return desc;
-		}
-
-		const testname = getDescription(result);
-		let testnameFormatted = testname;
-
-		if (testnameFormatter !== null) {
-			testnameFormatted = testnameFormatter(testname, result);
-			if (testnameFormatted && testnameFormatted !== testname) {
-				log.debug('Transformed test name "' + testname + '" -> "' + testnameFormatted + '"');
-			} else {
-				testnameFormatted = testname;
-				log.debug('Name not transformed for test "' + testnameFormatted + '"');
-			}
-		}
-		const testCase = appendToThisNode.ele('testCase', {name: testnameFormatted, duration: (result.time || 1)});
+		const testname = getTestName(result);
+		const testCase = appendToThisNode.ele('testCase', { name: testname, duration: (result.time || 1) });
 
 		if (result.skipped) {
-			testCase.ele('skipped', {message: 'Skipped'});
+			testCase.ele('skipped', { message: 'Skipped' });
 		}
 
 		if (!result.success) {
-			testCase.ele('failure', {message: 'Error'}, formatError(result.log.join('\n\n')));
+			testCase.ele('failure', { message: 'Error' }, formatError(result.log.join('\n\n')));
 		}
 	};
 
-	// wait for writing all the xml files, before exiting
-	this.onExit = function (done) {
+	const karmaOnExit = function(done) {
 		if (pendingFileWritings) {
 			fileWritingFinished = done;
 		} else {
@@ -193,25 +174,20 @@ const SonarQubeUnitReporter = function (baseReporterDecorator, config, logger, h
 		}
 	};
 
-	// look for jasmine test files in the specified path
-	const overrideTestDescription = reporterConfig.overrideTestDescription || false;
-	const testPath = reporterConfig.testPath || './';
-	const testPaths = reporterConfig.testPaths || [testPath];
-	const testFilePattern = reporterConfig.testFilePattern || '(.spec.ts|.spec.js)';
-	const filesForDescriptions = fileUtil.getFilesForDescriptions(testPaths, testFilePattern);
 
-	function defaultFilenameFormatter (nextPath, _result) {
-		return filesForDescriptions[nextPath];
-	}
-
-	if (overrideTestDescription) {
-		filenameFormatter = defaultFilenameFormatter;
-	}
+	// Bind karma functions
+	this.onRunStart = karmaOnRunStart;
+	this.onBrowserStart = karmaOnBrowserStart;
+	this.onBrowserComplete = karmaOnBrowserComplete;
+	this.onRunComplete = karmaOnRunComplete;
+	this.specSuccess = karmaSpecDone;
+	this.specSkipped = karmaSpecDone;
+	this.specFailure = karmaSpecDone;
+	this.onExit = karmaOnExit;
 };
 
-SonarQubeUnitReporter.$inject = ['baseReporterDecorator', 'config', 'logger', 'helper', 'formatError'];
+SonarQubeExecutionReporter.$inject = ['baseReporterDecorator', 'config', 'logger', 'helper', 'formatError'];
 
-// PUBLISH DI MODULE
 module.exports = {
-	'reporter:sonarqubeUnit': ['type', SonarQubeUnitReporter]
+	'reporter:sonarqubeUnit': ['type', SonarQubeExecutionReporter]
 };

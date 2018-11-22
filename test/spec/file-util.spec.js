@@ -55,4 +55,26 @@ describe('create description - file name map from test sources', () => {
 		};
 		expect(filesForDescriptions).toEqual(expected);
 	});
+
+	it('spaces in describe key-word', () => {
+		const filesForDescriptions = fileUtil.getFilesForDescriptions(['test/resources/spaces_multiple_files_multiple_descriptions'], '.spec.js');
+		const expectedPath1 = 'test/resources/spaces_multiple_files_multiple_descriptions/first_test.spec.js';
+		const expectedPath2 = 'test/resources/spaces_multiple_files_multiple_descriptions/second_test.spec.js';
+
+		const expected = {
+			'first test first description': expectedPath1,
+			'first test second description': expectedPath1,
+			'first test third description': expectedPath1,
+			'first test fourth description': expectedPath1,
+			'second test first description': expectedPath2,
+			'second test second description': expectedPath2,
+			'second test third description': expectedPath2,
+			'second test fourth description': expectedPath2
+		};
+
+		expect(filesForDescriptions).toEqual(expected);
+	});
 });
+
+/* eslint-disable no-undef */
+

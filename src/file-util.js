@@ -1,47 +1,34 @@
 const path = require('path');
 const fs = require('fs');
 
-module.exports = {
-	getFilesForDescriptions: getFilesForDescriptions
-};
 
-function getFilesForDescriptions (startPaths, filter) {
-	const ret = {};
+const findDescribeInText = function(textToSearch) {
+	const keyWords = [
+		'describe(',
+		'describe (',
+		'describe.only(',
+		'describe.only (',
+	];
 
-	startPaths.forEach((startPathItem) => {
-		const files = findFilesInDir(startPathItem, filter);
-		files.forEach(findDescriptionInFile);
-	});
+	for(const idx in keyWords) {
 
-	function findDescriptionInFile (item, _index) {
-		try {
-			let fileText = fs.readFileSync(item, 'utf8');
-			let position = 0;
-			while (position !== -1) {
-				let describe;
-				position = fileText.indexOf('describe(');
-				if (position !== -1) {
-					const delimeter = fileText[position + 9];
-					const descriptionEnd = fileText.indexOf(delimeter, position + 10) + 1;
-					describe = fileText.substring(position + 10, descriptionEnd - 1);
-					describe = describe.replace(/\\\\/g, '/');
-					item = item.replace(/\\\\/g, '/').replace(/\\/g, '/');
-					ret[describe] = item;
-					position = 0;
-					fileText = fileText.substring(descriptionEnd);
-				}
-			}
-		} catch (e) {
-			// eslint-disable-next-line no-console
-			console.error('Error:', e.stack);
+		const pos = textToSearch.indexOf(keyWords[idx]);
+
+		if (pos !== -1) {
+			return {
+				position: pos,
+				length: keyWords[idx].length
+			};
 		}
 	}
 
-	return ret;
-}
+	return {
+		position: -1,
+		length: 0
+	};
+};
 
-function findFilesInDir (startPath, filter) {
-	let results = [];
+const findFilesInDir = function(startPath, filter) {
 
 	if (!fs.existsSync(startPath)) {
 		// eslint-disable-next-line no-console
@@ -49,17 +36,66 @@ function findFilesInDir (startPath, filter) {
 		return;
 	}
 
+	let results = [];
 	const files = fs.readdirSync(startPath);
+	const filterRegex = new RegExp(filter);
+
 	for (let i = 0; i < files.length; i++) {
 		const filename = path.join(startPath, files[i]);
 		const stat = fs.lstatSync(filename);
-		if (stat.isDirectory()) {
-			if (filename !== 'node_modules') {
-				results = results.concat(findFilesInDir(filename, filter));
-			}
-		} else if (filename.endsWith(filter)) {
+
+		if (stat.isDirectory() && filename !== 'node_modules') {
+			results = results.concat(findFilesInDir(filename, filter));
+		} else if (filterRegex.test(filename)) {
 			results.push(filename);
 		}
 	}
+
 	return results;
-}
+};
+
+const findDescriptionInFile = (respArray) => (item, _index) => {
+	try {
+		let fileText = fs.readFileSync(item, 'utf8');
+		let position = 0;
+
+		while (position !== -1) {
+			let describe;
+			const findDescribe = findDescribeInText(fileText);
+			position = findDescribe.position;
+
+			if (position !== -1) {
+				const startDescribePosition = position + findDescribe.length;
+
+				const delimeter = fileText[startDescribePosition];
+				const descriptionEnd = fileText.indexOf(delimeter, startDescribePosition + 1) + 1;
+
+				describe = fileText.substring(startDescribePosition + 1, descriptionEnd - 1);
+				describe = describe.replace(/\\\\/g, '/');
+
+				item = item.replace(/\\\\/g, '/').replace(/\\/g, '/');
+
+				fileText = fileText.substring(descriptionEnd);
+				respArray[describe] = item;
+				position = 0;
+			}
+		}
+	} catch (e) {
+		// eslint-disable-next-line no-console
+		console.error('Error:', e.stack);
+	}
+};
+
+const getFilesForDescriptions = function(startPaths, filter) {
+	const ret = {};
+
+	startPaths.forEach((startPathItem) => {
+		const files = findFilesInDir(startPathItem, filter);
+		files.forEach(findDescriptionInFile(ret));
+	});
+
+	return ret;
+};
+
+
+module.exports = { getFilesForDescriptions };

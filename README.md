@@ -1,133 +1,57 @@
-### karma-sonarqube-execution-reporter
+# karma-sonarqube-execution-reporter
 
 [![NpmLicense](https://img.shields.io/npm/l/karma-sonarqube-execution-reporter.svg)](https://opensource.org/licenses/MIT) [![npm](https://img.shields.io/npm/dt/karma-sonarqube-execution-reporter.svg)](https://npmjs.com/package/karma-sonarqube-execution-reporter) [![NpmVersion](https://img.shields.io/npm/v/karma-sonarqube-execution-reporter.svg)](https://npmjs.com/package/karma-sonarqube-execution-reporter)
 
 
-##### Motivation
+## Motivation
 
 This solution is based on https://github.com/tornaia/karma-sonarqube-unit-reporter
 
 Issue: karma-sonarqube-unit-reporter has problem with putting correct `path` attribute in `file` tag.
 
-##### How to get
+## How to get
 
-Available on npmjs.org
+Just run `npm install --save-dev karma-sonarqube-unit-reporter` in your project directory.
+
+Package is also available on npmjs.org
 https://www.npmjs.com/package/https://github.com/lisrec/karma-sonarqube-execution-reporter
 
-##### How to use
+## How to use
 
-Sample karma.conf.ci.js
-```xml
-'use strict';
+1. Import plugin to karma.conf.js in `plugins` section:
 
-var path = require('path');
-var conf = require('./gulp/conf');
-
-var _ = require('lodash');
-var wiredep = require('wiredep');
-
-var pathSrcHtml = [
-  path.join(conf.paths.src, '/**/*.html'),
-  path.join(conf.paths.src_test, '/**/*.html')
-];
-
-function listFiles() {
-  var wiredepOptions = _.extend({}, conf.wiredep, {
-    dependencies: true,
-    devDependencies: true
-  });
-
-  return wiredep(wiredepOptions).js
-    .concat([
-      path.join(conf.paths.src, '/app/**/*.module.js'),
-      path.join(conf.paths.src, '/app/**/*.js'),
-      path.join(conf.paths.src, '/**/*.spec.js'),
-      path.join(conf.paths.src, '/**/*.mock.js'),
-      path.join(conf.paths.src_test, '/app/**/*.module.js'),
-      path.join(conf.paths.src_test, '/app/**/*.js'),
-      path.join(conf.paths.src_test, '/**/*.spec.js'),
-      path.join(conf.paths.src_test, '/**/*.mock.js')
-    ])
-    .concat(pathSrcHtml);
-}
-
-module.exports = function(config) {
-
-  var configuration = {
-    files: listFiles(),
-
-    singleRun: true,
-
-    colors:    false,
-
-    autoWatch: false,
-
-    ngHtml2JsPreprocessor: {
-      stripPrefix: conf.paths.src + '/',
-      moduleName: 'TODO_PUT_HERE_YOUR_MODULE_NAME'
-    },
-
-    logLevel: 'WARN',
-
-    frameworks: ['jasmine', 'angular-filesort'],
-
-    angularFilesort: {
-      whitelist: [path.join(conf.paths.src, '/**/!(*.html|*.spec|*.mock).js'), path.join(conf.paths.src_test, '/**/!(*.html|*.spec|*.mock).js')]
-    },
-
-    browsers: ['PhantomJS'],
-
-    sonarQubeUnitReporter: {
-      sonarQubeVersion: 'LATEST',
-      outputFile: 'reports/ut_report.xml',
-      useBrowserName: false
-    },
-
+```js
+module.exports = function (config) {
+  config.set({
     plugins: [
-      'karma-phantomjs-launcher',
-      'karma-angular-filesort',
-      'karma-coverage',
-      'karma-jasmine',
-      'karma-ng-html2js-preprocessor',
-      'karma-sonarqube-unit-reporter'
-    ],
-
-    coverageReporter: {
-      type : 'lcov',
-      dir : 'reports',
-      subdir : 'coverage'
-    },
-
-    reporters: ['progress', 'sonarqubeUnit', 'coverage'],
-
-    preprocessors: {
-      'src/**/*.js':   ['coverage'],
-      'test/**/*.js':   ['coverage']
-    }
-  };
-
-  config.set(configuration);
-};
+      require('karma-sonarqube-execution-reporter')
+    ]
+  })
+}
 ```
 
-By default, the description of the jasmine tests used as the path attribute in the generated xml. If this is not the case with your tests, you can use the following options to automagically find the right path values. It is the recommended way to use this plugin but to be backward compatible it is not enabled by default.
+2. Add basic configuration to karma.conf.js in `config.set` section:
 
-```
-sonarQubeUnitReporter: {
+```js
+module.exports = function (config) {
+  config.set({
+    sonarQubeExecutionReporter: {
       sonarQubeVersion: 'LATEST',
-      outputFile: 'reports/ut_report.xml',
-      overrideTestDescription: true,
-      testPaths: ['./test', './moreTests'],
-      testFilePattern: '.spec.js',
-      useBrowserName: false
-},
+      testPaths: ['./src/app'],
+      testFilePattern: '.spec.ts',
+      outputDir: './coverage',
+      outputFile: 'ut_report.xml'
+    },
+  })
+}
 ```
 
-##### Prerequisites for development
-
-* NodeJS 8.0.0 https://nodejs.org/download/release/v8.0.0/
-
-##### Build
-
-* npm install
-* npm build
+## Avaible options - descriptions [TODO]
+### sonarQubeVersion
+### suite
+### outputFile
+### outputDir
+### useBrowserName
+### testPath
+### testPaths
+### testFilePattern
