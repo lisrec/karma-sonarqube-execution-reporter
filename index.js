@@ -10,10 +10,8 @@ const SonarQubeExecutionReporter = function(baseReporterDecorator, config, logge
 	// Get configuration
 	const repConf = config.sonarQubeExecutionReporter || {};
 	const sonarQubeVersion = repConf.sonarQubeVersion || 'LATEST';
-	const pkgName = repConf.suite || '';
 	const outputFile = repConf.outputFile;
 	const outputDir = helper.normalizeWinPath(path.resolve(config.basePath, repConf.outputDir || '.')) + path.sep;
-	const useBrowserName = (!repConf.useBrowserName) ? false : true;
 
 	const testPath = repConf.testPath || './';
 	const testPaths = repConf.testPaths || [testPath];
@@ -59,13 +57,9 @@ const SonarQubeExecutionReporter = function(baseReporterDecorator, config, logge
 	};
 
 	const writeXmlForBrowser = function(browser) {
-		const safeBrowserName = browser.name.replace(/ /g, '_');
 		let newOutputFile;
 		if (outputFile != null) {
-			const dir = useBrowserName ? path.join(outputDir, safeBrowserName) : outputDir;
-			newOutputFile = path.join(dir, outputFile);
-		} else if (useBrowserName) {
-			newOutputFile = path.join(outputDir, 'ut_report-' + safeBrowserName + '.xml');
+			newOutputFile = path.join(outputDir, outputFile);
 		} else {
 			newOutputFile = path.join(outputDir, 'ut_report.xml');
 		}
@@ -89,11 +83,6 @@ const SonarQubeExecutionReporter = function(baseReporterDecorator, config, logge
 				}
 			});
 		});
-	};
-
-	const getClassName = function(browser, result) {
-		const browserName = browser.name.replace(/ /g, '_').replace(/\./g, '_') + '.';
-		return (useBrowserName ? browserName : '') + (pkgName ? pkgName + '/' : '') + result.suite[0];
 	};
 
 	const getTestName = function(result) {
@@ -130,7 +119,7 @@ const SonarQubeExecutionReporter = function(baseReporterDecorator, config, logge
 	};
 
 	const karmaSpecDone = function(browser, result) {
-		const specDescribe = getClassName(browser, result).replace(/\\/g, '/');
+		const specDescribe = result.suite[0].replace(/\\/g, '/');
 		const nextPath = transformDescribeToPath(specDescribe, result);
 		log.debug('Transformed File name "' + specDescribe + '" -> "' + nextPath + '"');
 

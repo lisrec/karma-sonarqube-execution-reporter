@@ -1,20 +1,13 @@
 # karma-sonarqube-execution-reporter
 
-[![NpmLicense](https://img.shields.io/npm/l/karma-sonarqube-execution-reporter.svg)](https://opensource.org/licenses/MIT) [![npm](https://img.shields.io/npm/dt/karma-sonarqube-execution-reporter.svg)](https://npmjs.com/package/karma-sonarqube-execution-reporter) [![NpmVersion](https://img.shields.io/npm/v/karma-sonarqube-execution-reporter.svg)](https://npmjs.com/package/karma-sonarqube-execution-reporter)
+[![NpmLicense](https://img.shields.io/npm/l/karma-sonarqube-execution-reporter.svg)](https://opensource.org/licenses/MIT)
+[![npm](https://img.shields.io/npm/dt/karma-sonarqube-execution-reporter.svg)](https://npmjs.com/package/karma-sonarqube-execution-reporter)
+[![NpmVersion](https://img.shields.io/npm/v/karma-sonarqube-execution-reporter.svg)](https://npmjs.com/package/karma-sonarqube-execution-reporter)
 
+## How to install
 
-## Motivation
-
-This solution is based on https://github.com/tornaia/karma-sonarqube-unit-reporter
-
-Issue: karma-sonarqube-unit-reporter has problem with putting correct `path` attribute in `file` tag.
-
-## How to get
-
-Just run `npm install --save-dev karma-sonarqube-unit-reporter` in your project directory.
-
-Package is also available on npmjs.org
-https://www.npmjs.com/package/https://github.com/lisrec/karma-sonarqube-execution-reporter
+Run `npm install --save-dev karma-sonarqube-unit-reporter` in your project directory. <br>
+Package is also available on [npmjs.org](https://www.npmjs.com/package/karma-sonarqube-execution-reporter)
 
 ## How to use
 
@@ -30,7 +23,7 @@ module.exports = function (config) {
 }
 ```
 
-2. Add basic configuration to karma.conf.js in `config.set` section:
+2. Add plugin configuration to karma.conf.js in `config.set` section:
 
 ```js
 module.exports = function (config) {
@@ -46,12 +39,44 @@ module.exports = function (config) {
 }
 ```
 
-## Avaible options - descriptions [TODO]
+## Avaible options - descriptions
+```ts
+sonarQubeExecutionReporter: {
+  sonarQubeVersion: string,
+  outputFile: string,
+  outputDir: string,
+  useBrowserName: boolean,
+  testPaths: string[],
+  testFilePattern: string,
+}
+```
+
 ### sonarQubeVersion
-### suite
+
+Pass `'LATEST'` or main version of your SonarQube (pattern: `'5.x'`, `'6.x'`, etc). <br>
+Default value: `'LATEST'`
+
 ### outputFile
+
+File name for xml report (for example `'execution-report.xml'`). <br>
+Default value: `'ut_report.xml'`
+
 ### outputDir
-### useBrowserName
+
+Relative directory for saving report file. If the directory doesn't exist will be created. <br>
+Default value: `'./'` (current directory)
+
 ### testPath
+
+A single path to the directory, that will be recursively scanned to find tests files. <br>
+Default value: `'./'` (current directory)
+
 ### testPaths
+
+You can pass multiple relative directories instead of a single path, all directories will be recursively scanned for tests files. (Overrides option `testPath`!) <br>
+Default value: `['./']` (current directory only)
+
 ### testFilePattern
+
+You can pass a regex that will match your test files (for example `'(.spec.js)|(.test.js)'`). <br>
+Default value: `.spec.(ts|js)`

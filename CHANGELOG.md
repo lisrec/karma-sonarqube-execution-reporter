@@ -26,3 +26,10 @@
 
 * Extracted nested functions.
 * Added new unit-tests for different `describe()` key-word combinantions.
+
+## 0.1.1 (2018-11-22)
+
+### Features
+
+* Removed unused plugin params.
+* Added description to ReadMe for plugin params.
