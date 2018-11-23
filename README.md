@@ -7,7 +7,7 @@
 ## How to install
 
 Run `npm install --save-dev karma-sonarqube-unit-reporter` in your project directory. <br>
-Package is also available on [npmjs.org](https://www.npmjs.com/package/karma-sonarqube-execution-reporter)
+Package is also available on [www.npmjs.com](https://www.npmjs.com/package/karma-sonarqube-execution-reporter)
 
 ## How to use
 
@@ -45,6 +45,7 @@ sonarQubeExecutionReporter: {
   sonarQubeVersion: string,
   outputFile: string,
   outputDir: string,
+  testPath: string,
   testPaths: string[],
   testFilePattern: string,
 }
